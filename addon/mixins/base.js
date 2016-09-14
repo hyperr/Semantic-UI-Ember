@@ -35,9 +35,9 @@ Semantic.BaseMixin = Ember.Mixin.create({
 
     for (let key in this.get('attrs')) {
       // If it has a settable and gettable attribute, then its bindable
-      if (settableProperties.contains(key) && gettableProperties.contains(key)) {
+      if (this._containsOrIncludes(settableProperties, key) && this._containsOrIncludes(gettableProperties, key)) {
         this.get('_bindableAttrs').addObject(key);
-      } else if (settableProperties.contains(key)) {
+      } else if (this._containsOrIncludes(settableProperties, key)) {
         // otherwise, its settable only
         this.get('_settableAttrs').addObject(key);
       }
@@ -171,6 +171,15 @@ Semantic.BaseMixin = Ember.Mixin.create({
 
     return value;
   },
+  
+  // Private helper method to fix deprecation warnings in ember 2.8
+  // See: https://github.com/Semantic-Org/Semantic-UI-Ember/issues/122#issuecomment-236947056
+  _containsOrIncludes(array, value) {
+    if (typeof array.includes) {
+      return array.includes(value);
+    }
+    return array.contains(value);
+  },
 
   _settings() {
     let moduleName = this.getSemanticModuleName();
@@ -191,7 +200,8 @@ Semantic.BaseMixin = Ember.Mixin.create({
       let value = this._getAttrValue(key);
 
       if (!moduleGlobal.settings.hasOwnProperty(key)) {
-        if (!this.get('_ignorableAttrs').contains(key) && !this.get('_ignorableAttrs').contains(Ember.String.camelize(key))) {
+        let ignoreableAttrs = this.get('_ignoreableAttrs');
+        if (this._containsOrIncludes(ignoreableAttrs, key) && !this._containsOrIncludes(ignoreableAttrs, Ember.String.camelize(key))) {
           // TODO: Add better ember keys here
           Ember.Logger.debug(`You passed in the property '${key}', but a setting doesn't exist on the Semantic UI module: ${moduleName}`);
         }
@@ -248,7 +258,7 @@ Semantic.BaseMixin = Ember.Mixin.create({
   },
 
   _swapAttrs(attrName) {
-    if (this.get('_settableAttrs').contains(attrName)) {
+    if (this._containsOrIncludes(this.get('_settableAttrs'), attrName)) {
       this.get('_settableAttrs').removeObject(attrName);
       this.get('_bindableAttrs').addObject(attrName);
     }
